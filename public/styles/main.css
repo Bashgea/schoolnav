@@ -1,0 +1,59 @@
+/* Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f4f6f8;
+}
+
+/* Fullscreen map */
+#map {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Debug panel */
+.info {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #ffffff;
+  padding: 12px 14px;
+  border-radius: 8px;
+  z-index: 10;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  min-width: 220px;
+}
+
+/* Text clarity */
+.info p {
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+/* Buttons */
+.info button {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #1db7dd;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.info button:hover {
+  background: #149bb9;
+}
+
+/* Debug visibility helpers */
+.debug {
+  outline: 2px dashed red;
+}
