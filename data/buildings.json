@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Lindell Library",
+    "lon": -93.241612,
+    "lat": 44.9672171
+  },
+  {
+    "name": "Christensen Center",
+    "lon": -93.240100,
+    "lat": 44.968200
+  },
+  {
+    "name": "Oren Gateway Center",
+    "lon": -93.2421,
+    "lat": 44.9688
+  },
+  {
+    "name": "Murphy Place",
+    "lon": -93.2398,
+    "lat": 44.9675
+  },
+  {
+    "name": "Sverdrup Hall",
+    "lon": -93.2406,
+    "lat": 44.9670
+  }
+]

@@ -2,38 +2,252 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AuggieMap – Route Info</title>
-
-  <!-- Optional CSS -->
-  <link rel="stylesheet" href="/css/main.css">
+  <title>AuggieMap</title>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+  <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
+  <style>
+    body { 
+      margin: 0; 
+      font-family: Arial, sans-serif; 
+    }
+    
+    h1 { 
+      text-align: center; 
+      background: #4CAF50;
+      color: white;
+      padding: 20px;
+      margin: 0;
+    }
+    
+    #map { 
+      width: 100%; 
+      height: 500px; 
+    }
+    
+    #buildings { 
+      text-align: center; 
+      margin: 20px; 
+    }
+    
+    #buildings button { 
+      margin: 5px; 
+      padding: 12px 24px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    #buildings button:hover { 
+      background: #0b7dda; 
+    }
+    
+    #info { 
+      text-align: center; 
+      margin: 20px;
+      font-size: 18px;
+    }
+    
+    #startRouteBtn {
+      display: none;
+      margin: 20px auto;
+      padding: 15px 40px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    #startRouteBtn:hover {
+      background: #45a049;
+    }
+    
+    .controls {
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-
-  <div class="info">
-    <h2>Walking / walking Directions</h2>
-
-    <p>
-      <strong>Distance:</strong>
-      <%= (distance / 1000).toFixed(2) %> km
-    </p>
-
-    <p>
-      <strong>Estimated Time:</strong>
-      <%= Math.round(duration / 60) %> minutes
-    </p>
-
-    <% if (summary && summary.length > 0) { %>
-      <p>
-        <strong>Route Summary:</strong>
-        <%= summary %>
-      </p>
-    <% } else { %>
-      <p>
-        <strong>Route Summary:</strong>
-        Not available
-      </p>
-    <% } %>
+  <h1>AuggieMap - Campus Navigator</h1>
+  
+  <div id="buildings">
+    <h2>Select Your Destination:</h2>
   </div>
 
+  <div id="map"></div>
+
+  <div class="controls">
+    <button id="startRouteBtn">Start Navigation</button>
+  </div>
+
+  <div id="info">
+    <p><strong>Distance:</strong> <span id="distance">-</span></p>
+    <p><strong>Time:</strong> <span id="time">-</span></p>
+  </div>
+
+  <script>
+    // Setup Mapbox
+    mapboxgl.accessToken = '<%= mapboxPublicToken %>';
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-93.2410, 44.9675],
+      zoom: 15
+    });
+
+    let userMarker = null;
+    let destinationMarker = null;
+    let routeData = null;
+    let isNavigating = false;
+
+    // Get elements
+    const startBtn = document.getElementById('startRouteBtn');
+
+    // Load buildings and create buttons
+    fetch('/buildings')
+      .then(res => res.json())
+      .then(buildings => {
+        const container = document.getElementById('buildings');
+        buildings.forEach(building => {
+          const btn = document.createElement('button');
+          btn.textContent = building.name;
+          btn.onclick = () => selectBuilding(building);
+          container.appendChild(btn);
+        });
+      });
+
+    // Step 1: User selects a building
+    function selectBuilding(building) {
+      // Get user's current location
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const userLon = position.coords.longitude;
+          const userLat = position.coords.latitude;
+          
+          // Fetch route from server
+          fetch(`/route?fromLon=${userLon}&fromLat=${userLat}&toLon=${building.lon}&toLat=${building.lat}`)
+            .then(res => res.json())
+            .then(data => {
+              routeData = data;
+              showRouteOverview([userLon, userLat], [building.lon, building.lat]);
+              
+              // Show "Start Route" button
+              startBtn.style.display = 'block';
+            });
+        },
+        error => {
+          alert('Unable to get your location. Please enable location services.');
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // Step 2: Show full route overview (zoomed out to see everything)
+    function showRouteOverview(startPoint, endPoint) {
+      // Draw route line
+      if (map.getSource('route')) {
+        map.getSource('route').setData({ 
+          type: 'Feature', 
+          geometry: routeData.geometry 
+        });
+      } else {
+        map.addSource('route', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: routeData.geometry }
+        });
+        map.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          paint: { 
+            'line-color': '#3887be', 
+            'line-width': 5 
+          }
+        });
+      }
+
+      // Add user marker (green)
+      if (userMarker) {
+        userMarker.setLngLat(startPoint);
+      } else {
+        userMarker = new mapboxgl.Marker({ color: 'green' })
+          .setLngLat(startPoint)
+          .addTo(map);
+      }
+
+      // Add destination marker (red)
+      if (destinationMarker) {
+        destinationMarker.setLngLat(endPoint);
+      } else {
+        destinationMarker = new mapboxgl.Marker({ color: 'red' })
+          .setLngLat(endPoint)
+          .addTo(map);
+      }
+
+      // Update info
+      document.getElementById('distance').textContent = 
+        (routeData.distance / 1000).toFixed(2) + ' km';
+      document.getElementById('time').textContent = 
+        Math.round(routeData.duration / 60) + ' min';
+
+      // Zoom to show ENTIRE route
+      const coords = routeData.geometry.coordinates;
+      const bounds = new mapboxgl.LngLatBounds(coords[0], coords[0]);
+      coords.forEach(coord => bounds.extend(coord));
+      map.fitBounds(bounds, { padding: 50 });
+    }
+
+    // Step 3: Start navigation (zoom in close to user)
+    startBtn.onclick = function() {
+      isNavigating = true;
+      startBtn.textContent = 'Navigation Active';
+      startBtn.style.background = '#ff9800';
+      
+      // Zoom in CLOSE to user's location
+      const userLocation = userMarker.getLngLat();
+      map.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 18,  // Close zoom for walking
+        duration: 2000
+      });
+
+      // Start tracking user's movement
+      startTracking();
+    };
+
+    // Track user location and keep map centered on them
+    function startTracking() {
+      navigator.geolocation.watchPosition(
+        position => {
+          const newLocation = [position.coords.longitude, position.coords.latitude];
+          
+          if (userMarker) {
+            userMarker.setLngLat(newLocation);
+          }
+
+          // Keep map centered on user while navigating
+          if (isNavigating) {
+            map.easeTo({
+              center: newLocation,
+              duration: 1000
+            });
+          }
+        },
+        error => {
+          console.error('GPS error:', error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 30000
+        }
+      );
+    }
+  </script>
 </body>
 </html>
