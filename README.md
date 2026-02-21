@@ -186,7 +186,7 @@ MIT License
 
 ## Author
 
-Bashir Ahmad - Augsburg University
+Armand Bashige - Augsburg University
 
 ## Acknowledgments
 
